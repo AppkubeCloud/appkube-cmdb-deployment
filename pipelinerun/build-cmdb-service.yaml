@@ -1,0 +1,213 @@
+
+---
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: appkube-cmdb-service-smoke
+  namespace: tekton-pipelines
+spec:
+  description: |
+    sparse-checkout-list-dir takes a git repository and a list of
+    directory patterns to match and lists all cloned files and directories.
+    This is an example pipeline demonstrating the following:
+      - Using the git-clone catalog Task to clone a specific set of
+        files based on directory patterns.
+      - Passing a cloned repo to subsequent Tasks using a Workspace.
+      - Ordering Tasks in a Pipeline using "runAfter" so that
+        git-clone completes before we try to read from the Workspace.
+      - Using a volumeClaimTemplate Volume as a Workspace.
+      - Avoiding hard-coded paths by using a Workspace's path
+        variable instead.
+  params:
+  - name: repo-url
+    type: string
+    description: CMDB source repo - https://github.com/AppkubeCloud/appkube-cmdb-service.git
+  - name: repo-revision
+    type: string
+    description: service revision to checkout. (branch, tag, sha, ref, etc...)
+  - name: cmdb-deploy-repo-url
+    type: string
+    description: deployment repo for CMDB service - https://github.com/AppkubeCloud/appkube-cmdb-deployment
+  - name: bdd-repo-url
+    type: string
+    description: bdd test repo - https://github.com/AppkubeCloud/appkube-cmdb-bdd-tests
+  - name: helm-workingDir-param
+    type: string
+    description: working directory for helm execution
+  - name: helm-release-version-param
+    type: string
+    description: Release version in helm chart
+  - name: helm-release-name-param
+    type: string
+    description: Helm release name
+  - name: helm-release-namespace-param
+    type: string
+    description: namespace for service installation
+  workspaces:
+  - name: shared-data
+    description: |
+      This workspace will receive the cloned git repo and be passed
+      to the next Task to list all cloned files and directories.
+  - name: shared-data1
+    description: |
+      This workspace will receive the cloned helm git repo
+  - name: bdd-test-repo
+    description: |
+      Repo for dbb tests - https://github.com/AppkubeCloud/appkube-cmdb-bdd-tests 
+  - name: dockerconfig-secret
+    description: |
+      This workspace will have docker config.json
+  - name: aws-secrets
+    description: |
+      This workspace will hold aws credentials
+  tasks:
+  - name: fetch-repo
+    taskRef:
+      name: git-clone
+    workspaces:
+    - name: output
+      workspace: shared-data
+    params:
+    - name: url
+      value: $(params.repo-url)
+    - name: revision
+      value: $(params.repo-revision)
+  - name: build-maven
+    runAfter: ["fetch-repo"]
+    taskRef:
+      name: build-maven
+    workspaces:
+    - name: source
+      workspace: shared-data
+    params:
+    - name: workingDir
+      value: $(workspaces.source.path)
+  - name: build-kaniko
+    runAfter: ["build-maven"]
+    taskRef:
+      name: build-kaniko
+    workspaces:
+    - name: source
+      workspace: shared-data
+    - name: dockerconfig
+      workspace: dockerconfig-secret
+    params:
+    - name: IMAGE
+      value: synectiks/appkube-cmdb-service:$(tasks.fetch-repo.results.commit)
+    - name: DOCKERFILE
+      value: $(workspaces.source.path)/Dockerfile
+    - name: CONTEXT
+      value: ./
+  - name: fetch-cmdb-deploy-repo
+    taskRef:
+      name: git-clone
+    workspaces:
+    - name: output
+      workspace: shared-data1
+    params:
+    - name: url
+      value: $(params.cmdb-deploy-repo-url)
+  - name: service-deploy-with-helm
+    runAfter: ["fetch-cmdb-deploy-repo", "build-kaniko"]
+    taskRef:
+      name: helm-appkube-cmdb-install
+    params:
+    - name: workingDir
+      value: $(params.helm-workingDir-param)
+    - name: release_version
+      value: $(params.helm-release-version-param)
+    - name: release_name
+      value: $(params.helm-release-name-param)
+    - name: release_namespace
+      value: $(params.helm-release-namespace-param)
+    - name: overwrite_values
+      value: image.tag=$(tasks.fetch-repo.results.commit)
+    workspaces:
+    - name: source
+      workspace: shared-data1
+    - name: secrets
+      workspace: aws-secrets
+  - name: fetch-bdd-test-repo
+    taskRef:
+      name: git-clone
+    workspaces:
+    - name: output
+      workspace: bdd-test-repo
+    params:
+    - name: url
+      value: $(params.bdd-repo-url)
+  - name: bdd-testing
+    runAfter: ["service-deploy-with-helm"]
+    taskRef:
+      name: cmdb-bdd-testing
+    workspaces:
+    - name: source
+      workspace: bdd-test-repo
+    params:
+    - name: workingDir
+      value: $(workspaces.source.path)/appkube-serenity-bdd
+  finally:
+    - name: cleanup-on-success
+      when:
+      - input: $(tasks.status)
+        operator: in
+        values: ["Succeeded"]
+      taskRef:
+        name: cleanup-on-success
+---
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: appkube-cmdb-service-smoke-run
+  namespace: tekton-pipelines
+spec:
+  pipelineRef:
+    name: appkube-cmdb-service-smoke
+  workspaces:
+  - name: shared-data
+    volumeClaimTemplate:
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+  - name: shared-data1
+    volumeClaimTemplate:
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+  - name: bdd-test-repo
+    volumeClaimTemplate:
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+  - name: dockerconfig-secret
+    secret:
+      secretName: kaniko-secret
+  - name: aws-secrets
+    secret:
+      secretName: smoke-aws-credentials
+  params:
+  - name: repo-url
+    value: https://github.com/AppkubeCloud/appkube-cmdb-service.git
+  - name: repo-revision
+    value: ''
+  - name: cmdb-deploy-repo-url
+    value: https://github.com/AppkubeCloud/appkube-cmdb-deployment
+  - name: bdd-repo-url
+    value: https://github.com/AppkubeCloud/appkube-cmdb-bdd-tests
+  - name: helm-release-version-param
+    value: 0.1.0
+  - name: helm-release-name-param
+    value: appkube-cmdb-service
+  - name: helm-release-namespace-param
+    value: appkube-cmdb-service
+  - name: helm-workingDir-param
+    value: $(workspaces.source.path)/appkube-cmdb-deployment/helm
