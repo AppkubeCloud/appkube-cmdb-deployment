@@ -210,4 +210,4 @@ spec:
   - name: helm-release-namespace-param
     value: appkube-cmdb-service
   - name: helm-workingDir-param
-    value: $(workspaces.source.path)/appkube-cmdb-deployment/helm
+    value: $(workspaces.source.path)/helm
