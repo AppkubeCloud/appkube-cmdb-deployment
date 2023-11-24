@@ -30,7 +30,7 @@ spec:
       - uri:
           prefix: "/cmdb"
       rewrite:
-        uri: /
+        uri: /api
       route:
       - destination:
           host: appkube-cmdb-service.appkube-cmdb-service.svc.cluster.local
@@ -40,7 +40,7 @@ spec:
       - uri:
           prefix: "/security"
       rewrite:
-        uri: /api
+        uri: /security
       route:
       - destination:
           host: appkube-security-rbac-service.appkube-security-rbac-service.svc.cluster.local
@@ -55,4 +55,4 @@ spec:
       - destination:
           host: vault.vault.svc.cluster.local
           port:
-            number: 8201
+            number: 8200
