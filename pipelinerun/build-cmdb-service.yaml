@@ -128,6 +128,10 @@ spec:
     - name: secrets
       workspace: aws-secrets
   - name: fetch-bdd-test-repo
+    when:
+      - input: $(params.bdd-repo-url)
+        operator: notin
+        values: [""]
     taskRef:
       name: git-clone
     workspaces:
@@ -137,11 +141,11 @@ spec:
     - name: url
       value: $(params.bdd-repo-url)
   - name: bdd-testing
-    when: # temporarily skipping the tests
-      - input: "foo"
-        operator: in
-        values: [ "bar" ]
-    runAfter: ["service-deploy-with-helm"]
+    when:
+      - input: $(params.bdd-repo-url)
+        operator: notin
+        values: [""]
+    runAfter: ["fetch-bdd-test-repo"]
     taskRef:
       name: cmdb-bdd-testing
     workspaces:
@@ -206,7 +210,7 @@ spec:
   - name: cmdb-deploy-repo-url
     value: https://github.com/AppkubeCloud/appkube-cmdb-deployment
   - name: bdd-repo-url
-    value: https://github.com/AppkubeCloud/appkube-cmdb-bdd-tests
+    value: ""
   - name: helm-release-version-param
     value: 0.1.0
   - name: helm-release-name-param
