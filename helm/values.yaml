@@ -47,7 +47,7 @@ prometheus:
   job: "appkube_cmdb"
   port: "6057"
   metrics_path: "/management/prometheus"
-  label: "appkube_cmdb"
+  label: "environment=test,app=appkube_cmdb"
   scrape_enabled: true
 ingress:
   enabled: false
