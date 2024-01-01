@@ -43,6 +43,12 @@ service:
   type: ClusterIP
   port: 6057
 
+prometheus:
+  job: "appkube_cmdb"
+  port: "6057"
+  metrics_path: "/management/prometheus"
+  label: "appkube_cmdb"
+  scrape_enabled: true
 ingress:
   enabled: false
   className: ""
