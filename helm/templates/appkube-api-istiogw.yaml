@@ -82,7 +82,7 @@ spec:
       - uri:
           prefix: "/vault"
       rewrite:
-        uri: "ui/"
+        uri: "/ui"
       route:
       - destination:
           host: vault.vault.svc.cluster.local

@@ -94,6 +94,8 @@ spec:
     params:
     - name: IMAGE
       value: synectiks/appkube-cmdb-service:$(tasks.fetch-repo.results.commit)
+    - name: IMAGE2
+      value: synectiks/appkube-cmdb-service:latest
     - name: DOCKERFILE
       value: $(workspaces.source.path)/Dockerfile
     - name: CONTEXT
