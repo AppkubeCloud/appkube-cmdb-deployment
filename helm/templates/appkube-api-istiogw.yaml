@@ -13,7 +13,6 @@ spec:
       protocol: HTTP
     hosts:
     - "api.synectiks.net"
-    - "monitoring.synectiks.net"
   - port:
       number: 443
       name: https
@@ -82,7 +81,7 @@ spec:
       - uri:
           prefix: "/vault"
       rewrite:
-        uri: "/ui"
+        uri: "ui/"
       route:
       - destination:
           host: vault.vault.svc.cluster.local
