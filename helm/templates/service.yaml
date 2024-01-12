@@ -1,6 +1,12 @@
 apiVersion: v1
 kind: Service
 metadata:
+  annotations:
+    prometheus.io/scrape: 'true'
+    prometheus.io/job: appkube-cmdb_test
+    prometheus.io/path: /management/prometheus
+    prometheus.io/port: '6057'
+    prometheus.io/label: environment=devtest,app=appkube_cmdb_test
   name: {{ include "appkube-cmdb-service.fullname" . }}
   labels:
     {{- include "appkube-cmdb-service.labels" . | nindent 4 }}
