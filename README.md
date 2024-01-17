@@ -2,9 +2,10 @@
 Appkube CMDB deployment code
 
 # install service
-* `kubectl apply -f appkube-cmdb-deployment/1_namespace.yaml``
-Add configmap and db secret
-* `kubectl apply -f appkube-cmdb-deployment/2_datasource-credentials.yaml``
+* Create service namespace and add istio labelS
+* `kubectl apply -f appkube-cmdb-deployment/1_namespace.yaml`
+* Add configmap and db secret
+* `kubectl apply -f appkube-cmdb-deployment/2_datasource-credentials.yaml`
 * `helm upgrade -i -n appkube-cmdb-service appkube-cmdb-service ./appkube-cmdb-deployment/helm/ --set "image.tag=latest"`
 
 # uninstall service
