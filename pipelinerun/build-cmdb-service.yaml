@@ -109,6 +109,8 @@ spec:
     params:
     - name: url
       value: $(params.cmdb-deploy-repo-url)
+    - name: revision
+      value: "0.1" 
   - name: service-deploy-with-helm
     runAfter: ["fetch-cmdb-deploy-repo", "build-kaniko"]
     taskRef:
