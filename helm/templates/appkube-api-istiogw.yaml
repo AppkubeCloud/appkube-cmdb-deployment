@@ -1,0 +1,81 @@
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: appkube-api-gateway
+  namespace: istio-system
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "api.synectiks.net"
+    - "monitoring.synectiks.net"
+  - port:
+      number: 443
+      name: https
+      protocol: HTTP
+    # tls:
+    #   mode: SIMPLE
+    hosts:
+    - "api.synectiks.net"
+    - "monitoring.synectiks.net"
+     
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: appkube-api-vs
+  namespace: istio-system
+spec:
+  hosts:
+  - "api.synectiks.net"
+  gateways:
+  - appkube-api-gateway
+  http:
+    - match:
+      - uri:
+          prefix: "/cmdb"
+      rewrite:
+        uri: /api
+      route:
+      - destination:
+          host: appkube-cmdb-service.appkube-cmdb-service.svc.cluster.local
+          port:
+            number: 6057
+    - match:
+      - uri:
+          prefix: "/security"
+      rewrite:
+        uri: /security
+      route:
+      - destination:
+          host: appkube-security-rbac-service.appkube-security-rbac-service.svc.cluster.local
+          port:
+            number: 8094
+      corsPolicy:
+        allowHeaders:
+        - "*"
+        allowMethods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+        allowCredentials: true
+        allowOrigin:
+        - "*"  
+    - match:
+      - uri:
+          prefix: "/vault"
+      rewrite:
+        uri: "ui/"
+      route:
+      - destination:
+          host: vault.vault.svc.cluster.local
+          port:
+            number: 8200
+      timeout: 30s
