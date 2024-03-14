@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orgchart
+  namespace: default
+  labels:
+    app: orgchart
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: orgchart
+  template:
+    metadata:
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/tls-skip-verif: "true"
+        vault.hashicorp.com/role: "appkube-cmdb"
+        vault.hashicorp.com/agent-inject-secret-database: "kv-v1/config/database"
+        vault.hashicorp.com/agent-inject-template-database: |
+          {{- with secret "kv-v1/config/database" -}}
+          # postgresql://{{ .Data.dbusername }}:{{ .Data.dbpassword }}@{{ .Data.dbhost }}:5432/wizard
+          export db.password={{ .Data.dbpassword }}
+          export db.user={{ .Data.dbusername }}
+          export db.schema={{ .Data.dbschema }}
+          export db.host={{ .Data.dbhost }}
+          export db.server.port={{ .Data.dbport }}
+
+          {{- end -}}
+      labels:
+        app: orgchart
+    spec:
+      serviceAccountName: appkube-cmdb-service-acc
+      containers:
+        - name: orgchart
+          image: jweissig/app:0.0.1
+          command:
+            ['sh', '-c']
+          args:
+            ['source /vault/secrets/database']
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: appkube-cmdb-service-acc
+  namespace: default
+  labels:
+    app: orgchart

@@ -13,7 +13,7 @@ spec:
       {{- include "appkube-cmdb-service.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- with .Values.podAnnotations }}
+      {{- toYaml .Values.podAnnotations | nindent 8 }}
       annotations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
